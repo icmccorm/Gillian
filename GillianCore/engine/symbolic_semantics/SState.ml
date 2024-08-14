@@ -16,6 +16,7 @@ module type S = sig
     pfs:PFS.t ->
     gamma:Type_env.t ->
     spec_vars:SS.t ->
+    imprecise:bool ->
     t
 
   val init : init_data -> t
@@ -49,6 +50,7 @@ module Make (SMemory : SMemory.S) :
     pfs : PFS.t;
     gamma : Type_env.t;
     spec_vars : SS.t;
+    imprecise : bool;
   }
   [@@deriving yojson]
 
@@ -69,7 +71,7 @@ module Make (SMemory : SMemory.S) :
   module ES = Expr.Set
 
   let pp fmt state =
-    let { heap; store; pfs; gamma; spec_vars } = state in
+    let { heap; store; pfs; gamma; spec_vars; _ } = state in
     let pp_heap fmt heap =
       if !Config.no_heap then Fmt.string fmt "NO HEAP PRINTED"
       else SMemory.pp fmt heap
@@ -93,7 +95,7 @@ module Make (SMemory : SMemory.S) :
   let sure_is_nonempty { heap; _ } = SMemory.sure_is_nonempty heap
 
   let pp_by_need pvars cmd_lvars cmd_locs fmt state =
-    let { heap = memory; store; pfs; gamma; spec_vars } = state in
+    let { heap = memory; store; pfs; gamma; spec_vars; _ } = state in
 
     let rec get_print_info (lvars : SS.t) (locs : SS.t) : SS.t * SS.t =
       (* let pp_str_list = Fmt.(brackets (list ~sep:comma string)) in
@@ -182,6 +184,7 @@ module Make (SMemory : SMemory.S) :
       pfs = PFS.init ();
       gamma = Type_env.init ();
       spec_vars = SS.empty;
+      imprecise = false;
     }
 
   let make_s
@@ -189,34 +192,35 @@ module Make (SMemory : SMemory.S) :
       ~(store : SStore.t)
       ~(pfs : PFS.t)
       ~(gamma : Type_env.t)
-      ~(spec_vars : SS.t) : t =
-    { heap = SMemory.init init_data; store; pfs; gamma; spec_vars }
+      ~(spec_vars : SS.t) 
+      ~(imprecise : bool) : t =
+    { heap = SMemory.init init_data; store; pfs; gamma; spec_vars; imprecise }
 
   let execute_action (action : string) (state : t) (args : vt list) : action_ret
       =
     let open Syntaxes.List in
-    let { heap; store; pfs; gamma; spec_vars } = state in
+    let { heap; store; pfs; gamma; spec_vars; imprecise } = state in
     let pc = Gpc.make ~matching:false ~pfs ~gamma () in
     let+ Gbranch.{ value; pc } = SMemory.execute_action action heap pc args in
     match value with
     | Ok (new_heap, vs) ->
         let store = SStore.copy store in
         let new_state =
-          { heap = new_heap; store; pfs = pc.pfs; gamma = pc.gamma; spec_vars }
+          { heap = new_heap; store; pfs = pc.pfs; gamma = pc.gamma; spec_vars; imprecise }
         in
         Ok (new_state, vs)
     | Error err -> Error (StateErr.EMem err)
 
   let consume_core_pred core_pred state in_args =
     let open Syntaxes.List in
-    let { heap; store; pfs; gamma; spec_vars } = state in
+    let { heap; store; pfs; gamma; spec_vars; imprecise } = state in
     let pc = Gpc.make ~matching:true ~pfs ~gamma () in
     let+ Gbranch.{ value; pc } = SMemory.consume core_pred heap pc in_args in
     match value with
     | Ok (new_heap, vs) ->
         let store = SStore.copy store in
         let new_state =
-          { heap = new_heap; store; pfs = pc.pfs; gamma = pc.gamma; spec_vars }
+          { heap = new_heap; store; pfs = pc.pfs; gamma = pc.gamma; spec_vars; imprecise }
         in
         Ok (new_state, vs)
     | Error err -> Error (StateErr.EMem err)
@@ -229,13 +233,13 @@ module Make (SMemory : SMemory.S) :
 
   let produce_core_pred core_pred state args =
     let open Syntaxes.List in
-    let { heap; store; pfs; gamma; spec_vars } = state in
+    let { heap; store; pfs; gamma; spec_vars; imprecise } = state in
     (* matching false is suspicious here *)
     let pc = Gpc.make ~matching:false ~pfs ~gamma () in
     let+ Gbranch.{ value = new_heap; pc } =
       SMemory.produce core_pred heap pc args
     in
-    { heap = new_heap; store; pfs = pc.pfs; gamma = pc.gamma; spec_vars }
+    { heap = new_heap; store; pfs = pc.pfs; gamma = pc.gamma; spec_vars; imprecise }
 
   let is_overlapping_asrt (a : string) : bool = SMemory.is_overlapping_asrt a
 
@@ -384,7 +388,7 @@ module Make (SMemory : SMemory.S) :
       ?(kill_new_lvars = true)
       ?(matching = false)
       (state : t) : st * t list =
-    let { heap; store; pfs; gamma; spec_vars } = state in
+    let { heap; store; pfs; gamma; spec_vars; imprecise } = state in
     let save_spec_vars =
       if save then (SS.empty, true) else (spec_vars, false)
     in
@@ -446,7 +450,7 @@ module Make (SMemory : SMemory.S) :
             in
             if not kill_new_lvars then
               Typing.naively_infer_type_information pfs gamma;
-            [ { heap = mem; store; pfs; gamma; spec_vars } ]
+            [ { heap = mem; store; pfs; gamma; spec_vars; imprecise } ]
         | multi_mems ->
             List.map
               (fun (mem, lpfs, lgamma) ->
@@ -464,6 +468,7 @@ module Make (SMemory : SMemory.S) :
                   pfs = bpfs;
                   gamma = bgamma;
                   spec_vars;
+                  imprecise;
                 })
               multi_mems
       in
@@ -489,7 +494,7 @@ module Make (SMemory : SMemory.S) :
     Reduction.reduce_lexpr ~gamma ~pfs v
 
   let copy (state : t) : t =
-    let { heap; store; pfs; gamma; spec_vars } = state in
+    let { heap; store; pfs; gamma; spec_vars; imprecise } = state in
     let result =
       {
         heap = SMemory.copy heap;
@@ -497,6 +502,7 @@ module Make (SMemory : SMemory.S) :
         pfs = PFS.copy pfs;
         gamma = Type_env.copy gamma;
         spec_vars;
+        imprecise;
       }
     in
     result
@@ -508,7 +514,7 @@ module Make (SMemory : SMemory.S) :
   let get_spec_vars ({ spec_vars; _ } : t) : SS.t = spec_vars
 
   let get_lvars (state : t) : Var.Set.t =
-    let { heap; store; pfs; gamma; spec_vars } = state in
+    let { heap; store; pfs; gamma; spec_vars; _ } = state in
     SMemory.lvars heap
     |> SS.union (SStore.lvars store)
     |> SS.union (PFS.lvars pfs)
@@ -582,7 +588,7 @@ module Make (SMemory : SMemory.S) :
     let subst = SSubst.filter subst (fun x y -> not (Expr.equal x y)) in
     if SSubst.is_empty subst then [ state ]
     else
-      let { heap; store; pfs; gamma; spec_vars } = state in
+      let { heap; store; pfs; gamma; spec_vars; imprecise } = state in
       SStore.substitution_in_place ~subst_all subst store;
       PFS.substitution subst pfs;
       Typing.substitution_in_place subst gamma;
@@ -591,7 +597,7 @@ module Make (SMemory : SMemory.S) :
       | [ (mem, lpfs, lgamma) ] ->
           let () = Formula.Set.iter (PFS.extend pfs) lpfs in
           let () = List.iter (fun (t, v) -> Type_env.update gamma t v) lgamma in
-          [ { heap = mem; store; pfs; gamma; spec_vars } ]
+          [ { heap = mem; store; pfs; gamma; spec_vars; imprecise } ]
       | multi_mems ->
           List.map
             (fun (mem, lpfs, lgamma) ->
@@ -607,6 +613,7 @@ module Make (SMemory : SMemory.S) :
                 pfs = bpfs;
                 gamma = bgamma;
                 spec_vars;
+                imprecise;
               })
             multi_mems
 
@@ -858,7 +865,7 @@ module Make (SMemory : SMemory.S) :
       L.verbose (fun m -> m "applying fix: %a" pp_fix fix);
       let open Syntaxes.List in
       let* this_state = states in
-      let { heap; store; pfs; gamma; spec_vars } = this_state in
+      let { heap; store; pfs; gamma; spec_vars; imprecise } = this_state in
       match fix with
       (* Apply fix in memory - this may change the pfs and gamma *)
       | MFix fix ->
@@ -866,7 +873,7 @@ module Make (SMemory : SMemory.S) :
           let+ Gbranch.{ value = heap; pc } =
             SMemory.apply_fix heap pfs gamma fix
           in
-          { heap; store; pfs = pc.pfs; gamma = pc.gamma; spec_vars }
+          { heap; store; pfs = pc.pfs; gamma = pc.gamma; spec_vars; imprecise }
       | FPure f ->
           PFS.extend pfs f;
           [ this_state ]
@@ -875,7 +882,7 @@ module Make (SMemory : SMemory.S) :
           [ this_state ]
       | Fspec_vars vars ->
           let spec_vars = SS.union vars spec_vars in
-          [ { heap; store; pfs; gamma; spec_vars } ]
+          [ { heap; store; pfs; gamma; spec_vars; imprecise } ]
     in
 
     let result = List.fold_left apply_fix [ state ] fixes in

@@ -980,6 +980,7 @@ let compile_pred filepath pred =
       pred_guard = None;
       pred_abstract = false;
       pred_pure = false;
+      pred_imprecise = false;
       pred_nounfold = pred.pred_nounfold;
     }
 

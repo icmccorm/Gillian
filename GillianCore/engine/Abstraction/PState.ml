@@ -15,6 +15,7 @@ module type S = sig
     pfs:PFS.t ->
     gamma:Type_env.t ->
     spec_vars:SS.t ->
+    imprecise:bool ->
     unit ->
     t
 
@@ -121,8 +122,9 @@ module Make (State : SState.S) :
       ~(pfs : PFS.t)
       ~(gamma : Type_env.t)
       ~(spec_vars : SS.t)
+      ~(imprecise: bool)
       () : t =
-    let state = State.make_s ~init_data ~store ~pfs ~gamma ~spec_vars in
+    let state = State.make_s ~init_data ~store ~pfs ~gamma ~spec_vars ~imprecise in
     let variants = Hashtbl.create 1 in
     {
       state;
@@ -132,7 +134,7 @@ module Make (State : SState.S) :
       variants;
     }
 
-  let make_s ~init_data:_ ~store:_ ~pfs:_ ~gamma:_ ~spec_vars:_ : t =
+  let make_s ~init_data:_ ~store:_ ~pfs:_ ~gamma:_ ~spec_vars:_ ~imprecise:_ : t =
     failwith "Calling make_s on a PState"
 
   let simplify

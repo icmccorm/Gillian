@@ -565,13 +565,16 @@ module Asrt : sig
 
   type t =
     | Emp  (** Empty heap *)
+    | Imprecise (* Gradual ? *)
     | Star of t * t  (** Separating conjunction *)
     | Pred of string * Expr.t list  (** Predicates *)
     | Pure of Formula.t  (** Pure formula *)
     | Types of (Expr.t * Type.t) list  (** Typing assertion *)
     | GA of string * Expr.t list * Expr.t list  (** Core assertion *)
     | Wand of { lhs : string * Expr.t list; rhs : string * Expr.t list }
-        (** Magic wand of the form [P(...) -* Q(...)] *)
+    (** Magic wand of the form [P(...) -* Q(...)] *)
+
+
   [@@deriving yojson, eq]
 
   (** Comparison of assertions *)
@@ -622,6 +625,9 @@ module Asrt : sig
 
   (** Check if [a] is a pure assertion *)
   val is_pure_asrt : t -> bool
+
+  (** Check if [a] is an imprecise assertion *)
+  val is_imprecise_asrt : t -> bool
 
   (** Check if [a] is a pure assertion & non-recursive assertion.
    It assumes that only pure assertions are universally quantified *)
@@ -784,6 +790,7 @@ module Pred : sig
     pred_facts : Formula.t list;  (** Facts that hold for every definition *)
     pred_guard : Asrt.t option;  (** Cost for unfolding the predicate *)
     pred_pure : bool;  (** Is the predicate pure? *)
+    pred_imprecise : bool;   (** Is the predicate imrpecise? *)
     pred_abstract : bool;  (**  Is the predicate abstract? *)
     pred_nounfold : bool;  (** Should the predicate be unfolded? *)
     pred_normalised : bool;  (** Has the predicate been previously normalised? *)
@@ -1321,6 +1328,7 @@ module Visitors : sig
          ; visit_EForall :
              'c -> Expr.t -> (string * Type.t option) list -> Expr.t -> Expr.t
          ; visit_Emp : 'c -> Asrt.t -> Asrt.t
+         ; visit_Imprecise : 'c -> Asrt.t -> Asrt.t
          ; visit_Empty : 'c -> Literal.t -> Literal.t
          ; visit_EmptyType : 'c -> Type.t -> Type.t
          ; visit_Epsilon : 'c -> Constant.t -> Constant.t
@@ -1588,6 +1596,7 @@ module Visitors : sig
       'c -> Expr.t -> (string * Type.t option) list -> Expr.t -> Expr.t
 
     method visit_Emp : 'c -> Asrt.t -> Asrt.t
+    method visit_Imprecise : 'c -> Asrt.t -> Asrt.t
     method visit_Empty : 'c -> Literal.t -> Literal.t
     method visit_EmptyType : 'c -> Type.t -> Type.t
     method visit_Epsilon : 'c -> Constant.t -> Constant.t
@@ -1884,6 +1893,7 @@ module Visitors : sig
          ; visit_Exists : 'c -> (string * Type.t option) list -> Expr.t -> 'f
          ; visit_EForall : 'c -> (string * Type.t option) list -> Expr.t -> 'f
          ; visit_Emp : 'c -> 'f
+         ; visit_Imprecise : 'c -> 'f
          ; visit_Empty : 'c -> 'f
          ; visit_EmptyType : 'c -> 'f
          ; visit_Epsilon : 'c -> 'f
@@ -2118,6 +2128,7 @@ module Visitors : sig
     method visit_Exists : 'c -> (string * Type.t option) list -> Expr.t -> 'f
     method visit_EForall : 'c -> (string * Type.t option) list -> Expr.t -> 'f
     method visit_Emp : 'c -> 'f
+    method visit_Imprecise : 'c -> 'f
     method visit_Empty : 'c -> 'f
     method visit_EmptyType : 'c -> 'f
     method visit_Epsilon : 'c -> 'f
@@ -2348,6 +2359,7 @@ module Visitors : sig
          ; visit_Exists : 'c -> (string * Type.t option) list -> Expr.t -> unit
          ; visit_EForall : 'c -> (string * Type.t option) list -> Expr.t -> unit
          ; visit_Emp : 'c -> unit
+         ; visit_Imprecise : 'c -> unit
          ; visit_Empty : 'c -> unit
          ; visit_EmptyType : 'c -> unit
          ; visit_Epsilon : 'c -> unit
@@ -2583,6 +2595,7 @@ module Visitors : sig
     method visit_Exists : 'c -> (string * Type.t option) list -> Expr.t -> unit
     method visit_EForall : 'c -> (string * Type.t option) list -> Expr.t -> unit
     method visit_Emp : 'c -> unit
+    method visit_Imprecise : 'c -> unit
     method visit_Empty : 'c -> unit
     method visit_EmptyType : 'c -> unit
     method visit_Epsilon : 'c -> unit

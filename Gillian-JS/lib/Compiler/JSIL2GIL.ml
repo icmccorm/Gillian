@@ -192,6 +192,7 @@ let jsil2gil_pred (pred : Pred.t) : GPred.t =
     pred_guard = None;
     (* TODO: Support for predicates with tokens *)
     pred_pure = pred.pure;
+    pred_imprecise = false;
     pred_abstract = pred.abstract;
     pred_nounfold = pred.nounfold;
     pred_normalised = pred.normalised;

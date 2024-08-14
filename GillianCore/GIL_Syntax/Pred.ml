@@ -10,6 +10,7 @@ type t = TypeDef__.pred = {
   pred_facts : Formula.t list;  (** Facts that hold for every definition *)
   pred_guard : Asrt.t option;  (** Cost for unfolding the predicate *)
   pred_pure : bool;  (** Is the predicate pure  *)
+  pred_imprecise : bool;
   pred_abstract : bool;  (** Is the predicate abstract *)
   pred_nounfold : bool;  (** Should the predicate be unfolded automatically *)
   pred_normalised : bool;  (** If the predicate has been previously normalised *)

@@ -154,6 +154,8 @@ let normalised_lvar_r = Str.regexp "##NORMALISED_LVAR"
 (* Logical expressions *)
 %token LNONE
 %token <string> ALOC
+%token IMPRECISE
+
 (* Logic assertions *)
 %token OASSERT
 %token CASSERT
@@ -706,6 +708,9 @@ g_assertion_target:
 (* emp *)
   | LEMP;
     { Asrt.Emp }
+(* ? *)
+  | IMPRECISE;
+    { Asrt.Imprecise }
 (* x(e1, ..., en) *)
   | pcall = predicate_call
     { 
@@ -845,6 +850,7 @@ g_pred_target:
     let pred_nounfold = pred_abstract || Option.is_some nounfold in
     let (pred_name, pred_num_params, pred_params, pred_ins) = pred_head in
     let pred_definitions = Option.value ~default:[] pred_definitions in
+    let pred_imprecise = List.exists (fun (_, a) -> Asrt.is_imprecise_asrt a) pred_definitions in
     let () = if (pred_abstract <> (pred_definitions = [])) then
       raise (Failure (Format.asprintf "Malformed predicate %s: either abstract with definition or non-abstract without definition." pred_name))
     in
@@ -866,6 +872,7 @@ g_pred_target:
         pred_facts;
         pred_guard;
         pred_pure;
+        pred_imprecise;
         pred_abstract;
         pred_nounfold;
         pred_normalised;

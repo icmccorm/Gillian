@@ -164,6 +164,7 @@ and formula =
 
 and assertion =
   | Emp
+  | Imprecise
   | Star of assertion * assertion
   | Pred of string * expr list
   | Pure of formula
@@ -223,6 +224,7 @@ and pred = {
   pred_facts : formula list;
   pred_guard : assertion option;
   pred_pure : bool;
+  pred_imprecise : bool;
   pred_abstract : bool;
   pred_nounfold : bool;
   pred_normalised : bool;

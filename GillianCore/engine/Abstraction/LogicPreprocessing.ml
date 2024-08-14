@@ -592,6 +592,7 @@ let add_closing_tokens preds =
             pred_definitions = [];
             pred_guard = None;
             pred_pure = false;
+            pred_imprecise = false;
             pred_abstract = true;
             pred_nounfold = true;
             pred_normalised = false;

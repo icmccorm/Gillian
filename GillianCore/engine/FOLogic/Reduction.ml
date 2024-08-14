@@ -3209,6 +3209,7 @@ let rec reduce_assertion_loop
   let result =
     match a with
     (* Empty heap *)
+    | Imprecise -> Asrt.Imprecise
     | Emp -> Asrt.Emp
     (* Star *)
     | Star (a1, a2) -> (

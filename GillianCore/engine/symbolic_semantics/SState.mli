@@ -11,6 +11,7 @@ module type S = sig
     pfs:PFS.t ->
     gamma:Type_env.t ->
     spec_vars:SS.t ->
+    imprecise:bool ->
     t
 
   val init : init_data -> t

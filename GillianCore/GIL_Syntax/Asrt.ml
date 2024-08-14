@@ -1,6 +1,7 @@
 (** {b GIL logic assertions}. *)
 type t = TypeDef__.assertion =
   | Emp  (** Empty heap             *)
+  | Imprecise (** Gradual ?    *)
   | Star of t * t  (** Separating conjunction *)
   | Pred of string * Expr.t list  (** Predicates             *)
   | Pure of Formula.t  (** Pure formula           *)
@@ -84,6 +85,7 @@ let rec map
     let a'' =
       match a' with
       | Star (a1, a2) -> Star (map_a a1, map_a a2)
+      | Imprecise -> Imprecise
       | Emp -> Emp
       | Pred (s, le) -> Pred (s, List.map map_e le)
       | Pure form -> Pure (map_p form)
@@ -158,6 +160,12 @@ let rec is_pure_asrt (a : t) : bool =
   | Star (a1, a2) -> is_pure_asrt a1 && is_pure_asrt a2
   | _ -> true
 
+let rec is_imprecise_asrt (a : t) : bool =
+  match a with
+  | Imprecise -> true
+  | Star (a1, a2) -> is_imprecise_asrt a1 || is_imprecise_asrt a2
+  | _ -> false
+
 (* Check if --a-- is a pure assertion & non-recursive assertion.
    It assumes that only pure assertions are universally quantified *)
 let is_pure_non_rec_asrt (a : t) : bool =
@@ -186,6 +194,7 @@ let make_pure (a : t) : Formula.t =
 let rec full_pp fmt a =
   match a with
   | Star (a1, a2) -> Fmt.pf fmt "%a *@ %a" full_pp a1 full_pp a2
+  | Imprecise -> Fmt.string fmt "?"
   | Emp -> Fmt.string fmt "emp"
   | Pred (name, params) ->
       let name = Pp_utils.maybe_quote_ident name in
@@ -213,6 +222,7 @@ let rec pp fmt a =
   match a with
   | Star (a1, a2) -> Fmt.pf fmt "%a *@ %a" pp a1 pp a2
   | Emp -> Fmt.string fmt "emp"
+  | Imprecise -> Fmt.string fmt "?"
   | Pred (name, params) ->
       let name = Pp_utils.maybe_quote_ident name in
       Fmt.pf fmt "@[<h>%s(%a)@]" name (Fmt.list ~sep:Fmt.comma Expr.pp) params

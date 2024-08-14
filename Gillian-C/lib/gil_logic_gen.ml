@@ -298,6 +298,7 @@ let gen_pred_of_struct cenv ann struct_name =
         pred_facts = [ (* FIXME: there are probably some facts to get *) ];
         pred_guard = None;
         pred_pure = false;
+        pred_imprecise = false;
         pred_abstract = false;
         pred_nounfold = false;
         pred_normalised = false;
@@ -722,6 +723,7 @@ let trans_abs_pred ~filepath cl_pred =
       pred_facts = [];
       pred_guard = None;
       pred_pure;
+      pred_imprecise = false;
       pred_abstract = true;
       pred_nounfold = true;
       pred_normalised = false;
@@ -763,6 +765,7 @@ let trans_pred ~ann ~filepath cl_pred =
       pred_facts = [];
       pred_guard = None;
       pred_pure;
+      pred_imprecise = false;
       pred_abstract = false;
       pred_nounfold = no_unfold;
       pred_normalised = false;

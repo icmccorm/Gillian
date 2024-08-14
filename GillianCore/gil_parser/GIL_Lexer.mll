@@ -285,6 +285,7 @@ rule read = parse
   | loc                  { GIL_Parser.LOC (Lexing.lexeme lexbuf) }
   | aloc                 { GIL_Parser.ALOC (Lexing.lexeme lexbuf) }
   | normalised_aloc      { GIL_Parser.ALOC (Lexing.lexeme lexbuf) }
+  | '?'                  { GIL_Parser.IMPRECISE }
 (* Directives *)
   | "@nopath"            { GIL_Parser.NO_PATH }
   | "@internal"          { GIL_Parser.INTERNAL }

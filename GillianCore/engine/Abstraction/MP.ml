@@ -538,7 +538,7 @@ let ins_outs_assertion
 let collect_simple_asrts a =
   let rec aux (a : Asrt.t) : Asrt.t Seq.t =
     match a with
-    | Pure True | Emp -> Seq.empty
+    | Pure True | Emp | Imprecise -> Seq.empty
     | Pure (And (f1, f2)) -> Seq.append (aux (Pure f1)) (aux (Pure f2))
     | Pure _ | Pred _ | GA _ | Wand _ -> Seq.return a
     | Types _ -> (

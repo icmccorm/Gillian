@@ -580,7 +580,7 @@ module Make (SPState : PState.S) = struct
           wands_l @ wands_r )
     | GA (a, es1, es2) -> ([ (a, es1, es2) ], [], [], [], [])
     | Wand { lhs; rhs } -> ([], [], [], [], [ { lhs; rhs } ])
-    | Emp -> ([], [], [], [], [])
+    | Emp | Imprecise -> ([], [], [], [], [])
     | Types lst -> ([], [], lst, [], [])
     | Pred (name, params) -> ([], [], [], [ (name, params) ], [])
     | Pure f -> ([], [ f ], [], [], [])
@@ -971,7 +971,7 @@ module Make (SPState : PState.S) = struct
         let wands' = normalise_wands wands in
         let astate : SPState.t =
           SPState.make_p ~preds:pred_defs ~init_data ~store ~pfs ~gamma
-            ~spec_vars:svars ()
+            ~spec_vars:svars ~imprecise:false ()
         in
         let astate = SPState.set_preds astate preds' in
         let astate = SPState.set_wands astate wands' in
